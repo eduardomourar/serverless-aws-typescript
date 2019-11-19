@@ -1,0 +1,84 @@
+service:
+  name: serverless-aws-typescript
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'eu-west-1'}
+  versionFunctions: false
+  stackTags:
+    "application": "messaging-application"
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
+  environment:
+    TOKEN_ISSUER: ${env:TOKEN_ISSUER}
+    JWKS_URI: ${env:JWKS_URI}
+    AUDIENCE: ${env:AUDIENCE}
+    API_KEY: ${env:API_KEY}
+  iamRoleStatements:
+    # allow the lambda to write logs
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+      Resource: 
+        - "Fn::Join": ["", ["arn:aws:logs:", {"Ref": "AWS::Region"}, ":*:*"]]
+
+event: &default_event
+  authorizer: authorize
+  cors: true
+
+functions:
+  listMessages:
+    handler: src/handler.listMessages
+    events:
+      - http:
+          method: get
+          path: message
+          <<: *default_event
+  postMessage:
+    handler: src/handler.postMessage
+    events:
+      - http:
+          method: post
+          path: message
+          <<: *default_event
+  storeMessage:
+    handler: src/handler.storeMessage
+    events:
+      - sns:
+          arn: !Ref messagingTopic
+          topicName: messaging-topic
+  getMessage:
+    handler: src/handler.getMessage
+    events:
+      - http:
+          method: get
+          path: message/{messageId}
+          <<: *default_event
+  authorize: # https://serverless.com/framework/docs/providers/aws/events/apigateway/#http-endpoints-with-custom-authorizers
+    handler: src/handler.authorize
+    # events:
+    #   - http:
+    #       method: post
+    #       path: authorize
+
+custom:
+    serverless-offline:
+    port: 3000
+    noTimeout: true
+
+resources:
+  Resources:
+    messagingTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: messaging-topic
+        DisplayName: Messaging Subscription

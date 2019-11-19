@@ -1,0 +1,53 @@
+{
+  "name": "serverless-aws-typescript",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx jest",
+    "test:coverage": "npx jest --coverage",
+    "lint": "npx eslint --config .eslintrc.js **/*.ts",
+    "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
+    "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
+    "start": "npx sls offline start",
+    "debug": "export SLS_DEBUG=* && export NODE_ENV=development && npx --node-arg=--inspect sls offline start",
+    "deploy": "npx sls deploy --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eduardomourar/serverless-aws-typescript.git"
+  },
+  "engines": {
+    "npm": ">=5.2.0",
+    "node": ">=8.0"
+  },
+  "author": "Eduardo Rodrigues",
+  "license": "MIT",
+  "dependencies": {
+    "bunyan": "^1.8.12",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^1.6.0",
+    "source-map-support": "^0.5.16"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.34",
+    "@types/bunyan": "^1.8.6",
+    "@types/jest": "^24.0.22",
+    "@types/lodash": "^4.14.146",
+    "@types/node": "^12.12.5",
+    "@typescript-eslint/eslint-plugin": "^2.6.1",
+    "@typescript-eslint/parser": "^2.6.1",
+    "dotenv": "^8.0.0",
+    "eslint": "^6.6.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-jest": "^23.0.3",
+    "jest": "^24.9.0",
+    "serverless": "^1.56.1",
+    "serverless-dotenv-plugin": "^2.1.1",
+    "serverless-offline": "^5.12.0",
+    "serverless-plugin-typescript": "^1.1.9",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.7.2"
+  }
+}
