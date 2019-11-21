@@ -4,6 +4,8 @@ service:
 plugins:
   - serverless-plugin-typescript
   - serverless-dotenv-plugin
+  - serverless-offline-sns
+  # - serverless-dynamodb-local
   - serverless-offline
 
 provider:
@@ -13,14 +15,14 @@ provider:
   region: ${opt:region, 'eu-west-1'}
   versionFunctions: false
   stackTags:
-    "application": "messaging-application"
+    "APPLICATION": "messaging-app"
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
-    TOKEN_ISSUER: ${env:TOKEN_ISSUER}
-    JWKS_URI: ${env:JWKS_URI}
-    AUDIENCE: ${env:AUDIENCE}
-    API_KEY: ${env:API_KEY}
+    REGION: ${self:provider.region}
+    SNS_TOPIC: ${env:SNS_TOPIC, 'messaging-topic'}
+    SNS_ARN: ${env:SNS_ARN, "arn:aws:sns:${self:provider.region}:${env:AWS_ACCOUNT, '123456789012'}:${env:SNS_TOPIC, 'messaging-topic'}"}
+    DB_TABLE: ${env:DB_TABLE, 'messaging-data'}
   iamRoleStatements:
     # allow the lambda to write logs
     - Effect: "Allow"
@@ -29,9 +31,35 @@ provider:
         - "logs:CreateLogStream"
         - "logs:PutLogEvents"
       Resource: 
-        - "Fn::Join": ["", ["arn:aws:logs:", {"Ref": "AWS::Region"}, ":*:*"]]
+        - "Fn::Join": ["", ["arn:aws:logs:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":*"]]
+    # allow the lambda to read/write database
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:Query"
+        - "dynamodb:GetItem"
+      Resource:
+        - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}"]]
+    # allow the lambda to publish in sns topic
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+      Resource:
+        - "Fn::Join": ["", ["arn:aws:sns:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]
+    - Effect: "Allow"
+      Action:
+        - "ses:SendEmail"
+        - "ses:SendRawEmail"
+      Resource: "*"
+    # allow xray permissions
+    # - Effect: "Allow" 
+    #   Action:
+    #     - "xray:PutTraceSegments"
+    #     - "xray:PutTelemetryRecords"
+    #   Resource:
+    #     - "*"
 
-event: &default_event
+event: &defaultEvent
   authorizer: authorize
   cors: true
 
@@ -42,43 +70,79 @@ functions:
       - http:
           method: get
           path: message
-          <<: *default_event
-  postMessage:
-    handler: src/handler.postMessage
+          <<: *defaultEvent
+  publishMessage:
+    handler: src/handler.publishMessage
     events:
       - http:
           method: post
           path: message
-          <<: *default_event
+          <<: *defaultEvent
+  sendMessage:
+    handler: src/handler.storeMessage
+    events:
+      - sns: ${self:provider.environment.SNS_TOPIC}
   storeMessage:
     handler: src/handler.storeMessage
     events:
-      - sns:
-          arn: !Ref messagingTopic
-          topicName: messaging-topic
+      - sns: ${self:provider.environment.SNS_TOPIC}
   getMessage:
     handler: src/handler.getMessage
     events:
       - http:
           method: get
           path: message/{messageId}
-          <<: *default_event
+          <<: *defaultEvent
   authorize: # https://serverless.com/framework/docs/providers/aws/events/apigateway/#http-endpoints-with-custom-authorizers
     handler: src/handler.authorize
+    environment:
+      TOKEN_ISSUER: ${env:TOKEN_ISSUER}
+      JWKS_URI: ${env:JWKS_URI}
+      AUDIENCE: ${env:AUDIENCE}
+      API_KEY: ${env:API_KEY}
     # events:
     #   - http:
     #       method: post
     #       path: authorize
 
 custom:
-    serverless-offline:
+  serverless-offline:
     port: 3000
     noTimeout: true
+  serverless-offline-sns:
+    port: 4002
+    debug: true
+    accountId: ${env:AWS_ACCOUNT, '123456789012'}
 
 resources:
+  Description: AWS Serverless Messaging App v${file(package.json):version}
   Resources:
-    messagingTopic:
-      Type: AWS::SNS::Topic
+    MessagingData:
+      Type: AWS::DynamoDB::Table
       Properties:
-        TopicName: messaging-topic
-        DisplayName: Messaging Subscription
+        TableName: ${self:provider.environment.DB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: messageId
+            AttributeType: "S"
+          - AttributeName: timestamp
+            AttributeType: "N"
+          - AttributeName: recipient
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: messageId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: recipient-index
+            KeySchema:
+              - AttributeName: recipient
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
