@@ -28,6 +28,9 @@ interface BasicAuth {
     password: string
 }
 
+/**
+ * Custom authorizer class to be used with AWS API Gateway
+ */
 export class Authorizer {
     constructor(
         private apiKey: string,
@@ -35,6 +38,12 @@ export class Authorizer {
     ) {
     }
 
+    /**
+     * Checks if request is authorized to proceed based on API Key, Basic Auth or JWT (Bearer Token)
+     *
+     * @param event - The event details from request
+     * @returns The generated policy to be passed along to API Gateway
+     */
     public async checkAuthorization(event: CustomAuthorizerEvent): Promise<any> {
         const token: Token = this.extractToken(event);
         logger.debug('"Authorizer.checkAuthorization": Extracted raw token', JSON.stringify(token));
@@ -77,7 +86,7 @@ export class Authorizer {
 
         if (tokenString) {
             if (tokenString.length < 8) {
-                throw new Error(`Invalid API Key - ${tokenString}`);
+                throw new Error(`Invalid API Key: ${tokenString}`);
             }
             return <Token>{
                 value: tokenString,
@@ -96,7 +105,7 @@ export class Authorizer {
     
         const match = tokenString.match(/^(Bearer|Basic)\s*(.*)$/);
         if (!match || match.length < 3) {
-            throw new Error(`Invalid Authorization token - ${tokenString}`);
+            throw new Error(`Invalid Authorization token: ${tokenString}`);
         }
         let tokenKind = TokenKind.Bearer;
         if (match[1] === 'Basic') {

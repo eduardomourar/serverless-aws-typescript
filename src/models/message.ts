@@ -9,6 +9,9 @@ export interface IMessage {
     kind: MessageKind,
     sender?: string,
     subject?: string,
-    messageId?: string,
-    timestamp?: number,
+}
+
+export interface IMessageWithId extends IMessage {
+    readonly messageId: string,
+    readonly timestamp?: number,
 }

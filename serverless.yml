@@ -79,7 +79,7 @@ functions:
           path: message
           <<: *defaultEvent
   sendMessage:
-    handler: src/handler.storeMessage
+    handler: src/handler.sendMessage
     events:
       - sns: ${self:provider.environment.SNS_TOPIC}
   storeMessage:
@@ -111,7 +111,7 @@ custom:
     noTimeout: true
   serverless-offline-sns:
     port: 4002
-    debug: true
+    # debug: true
     accountId: ${env:AWS_ACCOUNT, '123456789012'}
 
 resources:
