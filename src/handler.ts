@@ -15,15 +15,14 @@ import { Messager } from './messager';
 import 'source-map-support/register';
 
 export const listMessages: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
+  event: APIGatewayProxyEvent,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
-
   logger.debug({ event }, 'handler.listMessages.event');
   logger.debug({ context }, 'handler.listMessages.context');
 
   const client = new Messager(process.env.DB_TABLE);
-  const recipient = (event.queryStringParameters || {})['recipient'];
+  const { recipient } = event.queryStringParameters || {};
   const messages = await client.list(recipient);
   return {
     statusCode: 200,
@@ -35,10 +34,9 @@ export const listMessages: APIGatewayProxyHandler = async (
 };
 
 export const publishMessage: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
+  event: APIGatewayProxyEvent,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
-
   logger.debug({ event }, 'handler.publishMessage.event');
   logger.debug({ context }, 'handler.publishMessage.context');
 
@@ -55,10 +53,9 @@ export const publishMessage: APIGatewayProxyHandler = async (
 };
 
 export const storeMessage: SNSHandler = async (
-  event: SNSEvent = <SNSEvent>{},
-  context: Context = <Context>{},
+  event: SNSEvent,
+  context: Context,
 ): Promise<void> => {
-
   logger.debug({ event }, 'handler.storeMessage.event');
   logger.debug({ context }, 'handler.storeMessage.context');
 
@@ -68,10 +65,9 @@ export const storeMessage: SNSHandler = async (
 };
 
 export const sendMessage: SNSHandler = async (
-  event: SNSEvent = <SNSEvent>{},
-  context: Context = <Context>{},
+  event: SNSEvent,
+  context: Context,
 ): Promise<void> => {
-
   logger.debug({ event }, 'handler.sendMessage.event');
   logger.debug({ context }, 'handler.sendMessage.context');
 
@@ -81,14 +77,13 @@ export const sendMessage: SNSHandler = async (
 };
 
 export const getMessage: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
+  event: APIGatewayProxyEvent,
+  context: Context,
 ): Promise<APIGatewayProxyResult> => {
-
   logger.debug({ event }, 'handler.getMessage.event');
   logger.debug({ context }, 'handler.getMessage.context');
 
-  const messageId = (event.pathParameters || {})['messageId'];
+  const { messageId } = event.pathParameters || {};
 
   const client = new Messager(process.env.DB_TABLE);
   const message = await client.get(messageId);
@@ -102,10 +97,9 @@ export const getMessage: APIGatewayProxyHandler = async (
 };
 
 export const authorize: CustomAuthorizerHandler = async (
-  event: CustomAuthorizerEvent = <CustomAuthorizerEvent>{},
-  context: Context = <Context>{},
+  event: CustomAuthorizerEvent,
+  context: Context,
 ): Promise<CustomAuthorizerResult> => {
-
   logger.debug({ event }, 'handler.authorize.event');
   logger.debug({ context }, 'handler.authorize.context');
 
@@ -118,8 +112,7 @@ export const authorize: CustomAuthorizerHandler = async (
 
   try {
     return client.checkAuthorization(event);
-  }
-  catch (err) {
+  } catch (err) {
     logger.error('User not authorized', { error: err.message });
     throw new Error('Unauthorized');
   }

@@ -1,4 +1,6 @@
-import { AWSError, config, DynamoDB, SharedIniFileCredentials, SES, SNS } from 'aws-sdk';
+import {
+  AWSError, config, DynamoDB, SharedIniFileCredentials, SES, SNS,
+} from 'aws-sdk';
 import {
   AttributeValue,
   GetItemInput,
@@ -20,7 +22,9 @@ const isLocal = process.env.OFFLINE || !process.env.AWS_LAMBDA_FUNCTION_NAME;
  */
 export class Messager {
   private db: DynamoDB;
+
   private sns: SNS;
+
   private ses: SES;
 
   constructor(
@@ -48,7 +52,7 @@ export class Messager {
   public async list(recipient: string): Promise<Array<IMessageWithId>> {
     logger.debug('"Messager.list": recipient', recipient);
 
-    if (!this.validateEmail(recipient) && !this.validatePhone(recipient)) {
+    if (!Messager.validateEmail(recipient) && !Messager.validatePhone(recipient)) {
       return Promise.reject(new Error(`Invalid phone number or email address. ${recipient}`));
     }
 
@@ -57,16 +61,15 @@ export class Messager {
       IndexName: 'recipient-index',
       KeyConditionExpression: 'recipient = :recipient',
       ExpressionAttributeValues: {
-        ':recipient': <AttributeValue>{
-          'S': recipient,
-        },
+        ':recipient': {
+          S: recipient,
+        } as AttributeValue,
       },
     };
     const record = await this.db.query(params).promise();
-    const convertedDataArray: Array<IMessageWithId> = [];
-    (record.Items || []).map((item: any) => {
-      const unmappedItem = <IMessageWithId>DynamoDB.Converter.unmarshall(item);
-      convertedDataArray.push(unmappedItem);
+    const convertedDataArray: Array<IMessageWithId> = (record.Items || []).map((item: any) => {
+      const unmappedItem = DynamoDB.Converter.unmarshall(item) as IMessageWithId;
+      return unmappedItem;
     });
     return Promise.resolve(convertedDataArray);
   }
@@ -79,19 +82,19 @@ export class Messager {
    */
   public async save(message: SNSMessage): Promise<PromiseResult<PutItemOutput, AWSError>> {
     logger.debug('"Messager.save": message', message);
-    const parsedMessage = <IMessage>JSON.parse(message.Message);
+    const parsedMessage = JSON.parse(message.Message) as IMessage;
     logger.debug('"Messager.save": parsedMessage', parsedMessage);
     const item = DynamoDB.Converter.marshall(parsedMessage);
 
     const params: PutItemInput = {
       TableName: this.dbTable,
       Item: {
-        'messageId': <AttributeValue>{
-          'S': message.MessageId,
-        },
-        'timestamp': <AttributeValue>{
-          'N': new Date(message.Timestamp).valueOf().toString(),
-        },
+        messageId: {
+          S: message.MessageId,
+        } as AttributeValue,
+        timestamp: {
+          N: new Date(message.Timestamp).valueOf().toString(),
+        } as AttributeValue,
         ...item,
       },
     };
@@ -109,7 +112,7 @@ export class Messager {
    */
   public async send(message: SNSMessage): Promise<any> {
     logger.debug('"Messager.send": message', message);
-    const parsedMessage = <IMessage>JSON.parse(message.Message);
+    const parsedMessage = JSON.parse(message.Message) as IMessage;
     logger.debug('"Messager.send": parsedMessage', parsedMessage);
 
     if (!parsedMessage) {
@@ -118,7 +121,7 @@ export class Messager {
 
     if (parsedMessage.kind === MessageKind.email) {
       return this.sendEmail(parsedMessage);
-    } else if (parsedMessage.kind === MessageKind.sms) {
+    } if (parsedMessage.kind === MessageKind.sms) {
       return this.sendSms(parsedMessage);
     }
     return Promise.reject(new Error(`Invalid or missing message type ("sms" or "email"). ${parsedMessage.kind}`));
@@ -134,16 +137,16 @@ export class Messager {
     logger.debug('"Messager.publish": body', message);
 
     const published = await this.sns.publish({
-      Message: JSON.stringify({ 'default': JSON.stringify(message) }),
+      Message: JSON.stringify({ default: JSON.stringify(message) }),
       MessageStructure: 'json',
       Subject: message.subject,
       TopicArn: this.snsArn,
     }).promise();
     logger.debug('"Messager.publish": published', published);
-    return Promise.resolve(<IMessageWithId>{
+    return Promise.resolve({
       ...message,
       messageId: published.MessageId,
-    });
+    } as IMessageWithId);
   }
 
   /**
@@ -158,9 +161,9 @@ export class Messager {
     const params: GetItemInput = {
       TableName: this.dbTable,
       Key: {
-        'messageId': <AttributeValue>{
-          'S': messageId,
-        },
+        messageId: {
+          S: messageId,
+        } as AttributeValue,
       },
     };
 
@@ -169,7 +172,7 @@ export class Messager {
     if (!record.Item) {
       return Promise.reject(new Error(`Unable to retrieve specified message. ${messageId}`));
     }
-    const convertedData = <IMessageWithId>DynamoDB.Converter.unmarshall(record.Item);
+    const convertedData = DynamoDB.Converter.unmarshall(record.Item) as IMessageWithId;
     return Promise.resolve(convertedData);
   }
 
@@ -177,7 +180,7 @@ export class Messager {
    * Connects to AWS DynamoDB service for later use
    */
   private connectDb(): void {
-    const endpoint = undefined; //isLocal ? 'http://localhost:8000' : undefined;
+    const endpoint = undefined; // isLocal ? 'http://localhost:8000' : undefined;
     this.db = new DynamoDB({
       apiVersion: '2012-08-10',
       region: process.env.REGION,
@@ -218,10 +221,10 @@ export class Messager {
 
     this.connectSes();
     const emailDestination = message.recipient;
-    if (!this.validateEmail(emailDestination)) {
+    if (!Messager.validateEmail(emailDestination)) {
       return Promise.reject(new Error(`Email is not properly formatted. ${emailDestination}`));
     }
-    const email = <SES.Types.SendEmailRequest>{
+    const email = {
       Message: {
         Body: {
           Text: {
@@ -238,7 +241,7 @@ export class Messager {
         ToAddresses: [emailDestination],
       },
       Source: message.sender,
-    };
+    } as SES.Types.SendEmailRequest;
     const published = await this.ses.sendEmail(email).promise();
     logger.debug('"Messager.send": published', published);
     return published;
@@ -255,13 +258,13 @@ export class Messager {
 
     this.connectSns();
     const destinationPhone = message.recipient;
-    if (!this.validatePhone(destinationPhone)) {
+    if (!Messager.validatePhone(destinationPhone)) {
       return Promise.reject(new Error(`Phone number does not match E.164 format. ${destinationPhone}`));
     }
     const responseSmsAttribute = await this.sns.setSMSAttributes({
       attributes: {
         DefaultSMSType: 'Transactional',
-      }
+      },
     }).promise();
     logger.debug('"Messager.sendSms": responseSmsAttribute', responseSmsAttribute);
     const published = await this.sns.publish({
@@ -272,11 +275,11 @@ export class Messager {
     return published;
   }
 
-  private validateEmail(email: string): boolean {
+  private static validateEmail(email: string): boolean {
     return !!email && !!email.match(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   }
 
-  private validatePhone(phone: string): boolean {
+  private static validatePhone(phone: string): boolean {
     return !!phone && !!phone.match(/^\+?[1-9]\d{1,14}$/);
   }
 }
