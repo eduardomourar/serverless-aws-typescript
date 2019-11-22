@@ -136,14 +136,13 @@ export class Messenger {
   public async publish(message: IMessage): Promise<IMessageWithId> {
     logger.debug('"Messenger.publish": body', message);
 
-    let published: any;
-    published = await this.sns.publish({
+    const published = await this.sns.publish({
       Message: JSON.stringify({ default: JSON.stringify(message) }),
       MessageStructure: 'json',
       Subject: message.subject,
       TopicArn: this.snsArn,
     }).promise();
-/*     if (message.kind === MessageKind.email) {
+    /* if (message.kind === MessageKind.email) {
       published = await this.sendEmail(message);
     } if (message.kind === MessageKind.sms) {
       published = await this.sendSms(message);
