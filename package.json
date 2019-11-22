@@ -24,6 +24,7 @@
   "author": "Eduardo Rodrigues",
   "license": "MIT",
   "dependencies": {
+    "aws-sdk": "^2.575.0",
     "bunyan": "^1.8.12",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.6.0",
@@ -45,7 +46,9 @@
     "jest": "^24.9.0",
     "serverless": "^1.56.1",
     "serverless-dotenv-plugin": "^2.1.1",
+    "serverless-dynamodb-local": "^0.2.38",
     "serverless-offline": "^5.12.0",
+    "serverless-offline-sns": "^0.65.0",
     "serverless-plugin-typescript": "^1.1.9",
     "ts-jest": "^24.1.0",
     "typescript": "^3.7.2"

@@ -4,99 +4,99 @@ import {
   APIGatewayProxyResult,
   Context,
   CustomAuthorizerEvent,
-  CustomAuthorizerResult,
   CustomAuthorizerHandler,
+  CustomAuthorizerResult,
+  SNSEvent,
+  SNSHandler,
 } from 'aws-lambda';
 import { logger } from './util/logger';
 import { Authorizer } from './util/authorizer';
-import { Messager } from './api/messager';
+import { Messenger } from './messager';
 import 'source-map-support/register';
 
-export const listMessages: APIGatewayProxyHandler = async (
-    event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-    context: Context = <Context>{},
-  ): Promise<APIGatewayProxyResult> => {
-
+export const listMessage: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent,
+  context: Context,
+): Promise<APIGatewayProxyResult> => {
   logger.debug({ event }, 'handler.listMessages.event');
   logger.debug({ context }, 'handler.listMessages.context');
 
-  const client = new Messager();
-  // let body = JSON.stringify(event.queryStringParameters);
-  const messages = await client.list('');
+  const client = new Messenger(process.env.DB_TABLE);
+  const { recipient } = event.queryStringParameters || {};
+  const messages = await client.list(recipient);
   return {
     statusCode: 200,
     body: JSON.stringify({
       message: messages,
-      input: event,
     }, null, 2),
   };
 };
 
-export const postMessage: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
-  ): Promise<APIGatewayProxyResult> => {
+export const publishMessage: APIGatewayProxyHandler = async (
+  event: APIGatewayProxyEvent,
+  context: Context,
+): Promise<APIGatewayProxyResult> => {
+  logger.debug({ event }, 'handler.publishMessage.event');
+  logger.debug({ context }, 'handler.publishMessage.context');
 
-  logger.debug({ event }, 'handler.sendMessage.event');
-  logger.debug({ context }, 'handler.sendMessage.context');
-
-  const client = new Messager();
-  // let body = JSON.stringify(event.queryStringParameters);
-  const messages = client.list('');
+  const body = JSON.parse(event.body || '{}');
+  const client = new Messenger('', process.env.SNS_ARN);
+  const response = await client.publish(body);
   return {
     statusCode: 200,
     body: JSON.stringify({
-      message: messages,
-      input: event,
+      data: response,
     }, null, 2),
   };
 };
 
-export const storeMessage: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
-  ): Promise<APIGatewayProxyResult> => {
-
+export const storeMessage: SNSHandler = async (
+  event: SNSEvent,
+  context: Context,
+): Promise<void> => {
   logger.debug({ event }, 'handler.storeMessage.event');
   logger.debug({ context }, 'handler.storeMessage.context');
 
-  const client = new Messager();
-  // let body = JSON.stringify(event.queryStringParameters);
-  const messages = client.list('');
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: messages,
-      input: event,
-    }, null, 2),
-  };
+  const body = event.Records[0].Sns;
+  const client = new Messenger(process.env.DB_TABLE);
+  await client.save(body);
+};
+
+export const sendMessage: SNSHandler = async (
+  event: SNSEvent,
+  context: Context,
+): Promise<void> => {
+  logger.debug({ event }, 'handler.sendMessage.event');
+  logger.debug({ context }, 'handler.sendMessage.context');
+
+  const body = event.Records[0].Sns;
+  const client = new Messenger();
+  await client.send(body);
 };
 
 export const getMessage: APIGatewayProxyHandler = async (
-  event: APIGatewayProxyEvent = <APIGatewayProxyEvent>{},
-  context: Context = <Context>{},
-  ): Promise<APIGatewayProxyResult> => {
-
+  event: APIGatewayProxyEvent,
+  context: Context,
+): Promise<APIGatewayProxyResult> => {
   logger.debug({ event }, 'handler.getMessage.event');
   logger.debug({ context }, 'handler.getMessage.context');
 
-  const client = new Messager();
-  // let body = JSON.stringify(event.queryStringParameters);
-  const messages = client.list('');
+  const { messageId } = event.pathParameters || {};
+
+  const client = new Messenger(process.env.DB_TABLE);
+  const message = await client.get(messageId);
   return {
     statusCode: 200,
     body: JSON.stringify({
-      message: messages,
-      input: event,
+      data: message,
     }, null, 2),
   };
 };
 
 export const authorize: CustomAuthorizerHandler = async (
-    event: CustomAuthorizerEvent = <CustomAuthorizerEvent>{},
-    context: Context = <Context>{},
-  ): Promise<CustomAuthorizerResult> => {
-
+  event: CustomAuthorizerEvent,
+  context: Context,
+): Promise<CustomAuthorizerResult> => {
   logger.debug({ event }, 'handler.authorize.event');
   logger.debug({ context }, 'handler.authorize.context');
 
@@ -109,8 +109,7 @@ export const authorize: CustomAuthorizerHandler = async (
 
   try {
     return client.checkAuthorization(event);
-  }
-  catch(err) {
+  } catch (err) {
     logger.error('User not authorized', { error: err.message });
     throw new Error('Unauthorized');
   }
