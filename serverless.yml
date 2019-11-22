@@ -24,7 +24,7 @@ provider:
     SNS_ARN: ${env:SNS_ARN, "arn:aws:sns:${self:provider.region}:${env:AWS_ACCOUNT, '123456789012'}:${env:SNS_TOPIC, 'messaging-topic'}"}
     DB_TABLE: ${env:DB_TABLE, 'messaging-data'}
   iamRoleStatements:
-    # allow the lambda to write logs
+    # Allow the lambda to write logs
     - Effect: "Allow"
       Action:
         - "logs:CreateLogGroup"
@@ -32,7 +32,7 @@ provider:
         - "logs:PutLogEvents"
       Resource: 
         - "Fn::Join": ["", ["arn:aws:logs:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":*"]]
-    # allow the lambda to read/write database
+    # Allow the lambda to read/write database
     - Effect: "Allow"
       Action:
         - "dynamodb:PutItem"
@@ -40,53 +40,51 @@ provider:
         - "dynamodb:GetItem"
       Resource:
         - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}"]]
-    # allow the lambda to publish in sns topic
-    - Effect: "Allow"
-      Action:
-        - "sns:Publish"
-      Resource:
-        - "Fn::Join": ["", ["arn:aws:sns:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]
+        - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}/*"]]
+    # Allow the lambda to send email message
     - Effect: "Allow"
       Action:
         - "ses:SendEmail"
         - "ses:SendRawEmail"
-      Resource: "*"
-    # allow xray permissions
-    # - Effect: "Allow" 
-    #   Action:
-    #     - "xray:PutTraceSegments"
-    #     - "xray:PutTelemetryRecords"
-    #   Resource:
-    #     - "*"
+      Resource:
+        - "Fn::Join": ["", ["arn:aws:ses:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":*"]]
+    # Allow the lambda to publish in sns topic and send sms message
+    - Effect: "Allow"
+      Action:
+        - "sns:Publish"
+        - "sns:SetSMSAttributes"
+      Resource:
+        - "*"
+        - "Fn::Join": ["", ["arn:aws:sns:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]
 
 event: &defaultEvent
   authorizer: authorize
   cors: true
 
 functions:
-  listMessages:
-    handler: src/handler.listMessages
+  list-message:
+    handler: src/handler.listMessage
     events:
       - http:
           method: get
           path: message
           <<: *defaultEvent
-  publishMessage:
+  publish-message:
     handler: src/handler.publishMessage
     events:
       - http:
           method: post
           path: message
           <<: *defaultEvent
-  sendMessage:
+  send-message:
     handler: src/handler.sendMessage
     events:
       - sns: ${self:provider.environment.SNS_TOPIC}
-  storeMessage:
+  store-message:
     handler: src/handler.storeMessage
     events:
       - sns: ${self:provider.environment.SNS_TOPIC}
-  getMessage:
+  get-message:
     handler: src/handler.getMessage
     events:
       - http:
@@ -100,10 +98,6 @@ functions:
       JWKS_URI: ${env:JWKS_URI}
       AUDIENCE: ${env:AUDIENCE}
       API_KEY: ${env:API_KEY}
-    # events:
-    #   - http:
-    #       method: post
-    #       path: authorize
 
 custom:
   serverless-offline:
@@ -111,11 +105,11 @@ custom:
     noTimeout: true
   serverless-offline-sns:
     port: 4002
-    # debug: true
+    debug: true
     accountId: ${env:AWS_ACCOUNT, '123456789012'}
 
 resources:
-  Description: AWS Serverless Messaging App v${file(package.json):version}
+  Description: AWS Serverless Messaging Delivery App v${file(package.json):version}
   Resources:
     MessagingData:
       Type: AWS::DynamoDB::Table

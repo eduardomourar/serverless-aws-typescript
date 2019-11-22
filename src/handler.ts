@@ -11,24 +11,23 @@ import {
 } from 'aws-lambda';
 import { logger } from './util/logger';
 import { Authorizer } from './util/authorizer';
-import { Messager } from './messager';
+import { Messenger } from './messager';
 import 'source-map-support/register';
 
-export const listMessages: APIGatewayProxyHandler = async (
+export const listMessage: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent,
   context: Context,
 ): Promise<APIGatewayProxyResult> => {
   logger.debug({ event }, 'handler.listMessages.event');
   logger.debug({ context }, 'handler.listMessages.context');
 
-  const client = new Messager(process.env.DB_TABLE);
+  const client = new Messenger(process.env.DB_TABLE);
   const { recipient } = event.queryStringParameters || {};
   const messages = await client.list(recipient);
   return {
     statusCode: 200,
     body: JSON.stringify({
       message: messages,
-      input: event,
     }, null, 2),
   };
 };
@@ -41,13 +40,12 @@ export const publishMessage: APIGatewayProxyHandler = async (
   logger.debug({ context }, 'handler.publishMessage.context');
 
   const body = JSON.parse(event.body || '{}');
-  const client = new Messager('', process.env.SNS_ARN);
+  const client = new Messenger('', process.env.SNS_ARN);
   const response = await client.publish(body);
   return {
     statusCode: 200,
     body: JSON.stringify({
       data: response,
-      input: event,
     }, null, 2),
   };
 };
@@ -60,7 +58,7 @@ export const storeMessage: SNSHandler = async (
   logger.debug({ context }, 'handler.storeMessage.context');
 
   const body = event.Records[0].Sns;
-  const client = new Messager(process.env.DB_TABLE);
+  const client = new Messenger(process.env.DB_TABLE);
   await client.save(body);
 };
 
@@ -72,7 +70,7 @@ export const sendMessage: SNSHandler = async (
   logger.debug({ context }, 'handler.sendMessage.context');
 
   const body = event.Records[0].Sns;
-  const client = new Messager();
+  const client = new Messenger();
   await client.send(body);
 };
 
@@ -85,13 +83,12 @@ export const getMessage: APIGatewayProxyHandler = async (
 
   const { messageId } = event.pathParameters || {};
 
-  const client = new Messager(process.env.DB_TABLE);
+  const client = new Messenger(process.env.DB_TABLE);
   const message = await client.get(messageId);
   return {
     statusCode: 200,
     body: JSON.stringify({
       data: message,
-      input: event,
     }, null, 2),
   };
 };
