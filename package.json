@@ -28,6 +28,7 @@
     "bunyan": "^1.8.12",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.6.0",
+    "middy": "^0.30.5",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {

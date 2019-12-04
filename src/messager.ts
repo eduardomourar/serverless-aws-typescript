@@ -49,11 +49,12 @@ export class Messenger {
    * @param recipient - The recipient that can be either an email or phone number
    * @returns All messages found addressed to recipient
    */
-  public async list(recipient: string): Promise<Array<IMessageWithId>> {
+  public async list(recipient: string, sender: string): Promise<Array<IMessageWithId>> {
     logger.debug('"Messenger.list": recipient', recipient);
+    logger.debug('"Messenger.list": sender', sender);
 
-    if (!Messenger.validateEmail(recipient) && !Messenger.validatePhone(recipient)) {
-      throw new Error(`[400] Invalid phone number or email address. ${recipient}`);
+    if (!recipient && !sender) {
+      throw new Error(`[400] Invalid recipient or sender.`);
     }
 
     const params: QueryInput = {
@@ -66,6 +67,26 @@ export class Messenger {
         } as AttributeValue,
       },
     };
+    if (recipient) {
+      if (!Messenger.validateEmail(recipient) && !Messenger.validatePhone(recipient)) {
+        throw new Error(`[400] Invalid phone number or email address. ${recipient}`);
+      }
+    }
+
+    if (sender) {
+      if (!Messenger.validateEmail(sender) && !Messenger.validatePhone(sender)) {
+        throw new Error(`[400] Invalid phone number or email address. ${sender}`);
+      }
+
+      params.IndexName = 'sender-index';
+      params.KeyConditionExpression = 'sender = :sender';
+      params.ExpressionAttributeValues =  {
+        ':sender': {
+          S: sender,
+        } as AttributeValue,
+      }
+    }
+
     const record = await this.db.query(params).promise();
     const convertedDataArray: Array<IMessageWithId> = (record.Items || []).map((item: any) => {
       const unmappedItem = DynamoDB.Converter.unmarshall(item) as IMessageWithId;
@@ -266,17 +287,27 @@ export class Messenger {
     if (!Messenger.validatePhone(destinationPhone)) {
       throw new Error(`[400] Phone number does not match E.164 format. ${destinationPhone}`);
     }
-    const responseSmsAttribute = await this.sns.setSMSAttributes({
-      attributes: {
-        DefaultSMSType: 'Promotional',
-        // DefaultSenderID: message.sender || 'APP',
-      },
-    }).promise();
-    logger.debug('"Messenger.sendSms": responseSmsAttribute', responseSmsAttribute);
+    let sender = 'APP';
+    if (message.sender && message.sender.length >= 10) {
+      sender = message.sender.replace(/\D/g, '');
+      sender = 'n' + sender.substr(0, 10);
+    }
+    const messageAttributes: SNS.MessageAttributeMap = {
+      DefaultSMSType: {
+        DataType: 'String',
+        Value: 'Promotional',
+      } as SNS.MessageAttributeValue,
+      DefaultSenderID: {
+        DataType: 'String',
+        Value: sender,
+      } as SNS.MessageAttributeValue,
+    };
+    logger.debug('"Messenger.sendSms": messageAttributes', messageAttributes);
     const published = await this.sns.publish({
       Message: message.body,
       PhoneNumber: destinationPhone,
       // Subject: message.subject,
+      MessageAttributes: messageAttributes,
     }).promise();
     logger.debug('"Messenger.sendSms": published', published);
     return published;
@@ -287,6 +318,6 @@ export class Messenger {
   }
 
   private static validatePhone(phone: string): boolean {
-    return !!phone && !!phone.match(/^\+?[1-9]\d{1,14}$/);
+    return !!phone && !!phone.match(/^\+?[1-9]\d{8,14}$/);
   }
 }
