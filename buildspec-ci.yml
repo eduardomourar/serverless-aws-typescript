@@ -1,0 +1,25 @@
+version: 0.2
+
+env:
+  variables:
+    NODE_ENV: development
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - npm ci --no-optional
+  build:
+    commands:
+      - npm run lint | tee coverage/lint.txt 
+      - npm run test:coverage | tee coverage/test.txt
+
+artifacts:
+  base-directory: 'coverage'
+  files:
+    - '**/*'
+
+cache:
+  paths:
+    - 'node_modules/**/*'
