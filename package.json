@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx jest",
-    "test:coverage": "npx jest --ci --coverage",
+    "test:coverage": "npx jest --colors --coverage",
     "lint": "npx eslint --config .eslintrc.js **/*.ts",
     "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",

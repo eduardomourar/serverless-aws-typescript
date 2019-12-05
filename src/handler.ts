@@ -13,7 +13,7 @@ import {
 import { logger } from './util/logger';
 import { Authorizer } from './util/authorizer';
 import { enableCors } from './util/cors';
-import { Messenger } from './messager';
+import { Messenger } from './messenger';
 import 'source-map-support/register';
 
 export const listMessage: APIGatewayProxyHandler = enableCors(async (

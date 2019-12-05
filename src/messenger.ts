@@ -309,11 +309,11 @@ export class Messenger {
     return published;
   }
 
-  private static validateEmail(email: string): boolean {
+  public static validateEmail(email: string): boolean {
     return !!email && !!email.match(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   }
 
-  private static validatePhone(phone: string): boolean {
+  public static validatePhone(phone: string): boolean {
     return !!phone && !!phone.match(/^\+?[1-9]\d{8,14}$/);
   }
 }
