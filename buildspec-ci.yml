@@ -25,7 +25,7 @@ reports:
   coverage:
     files:
       - '**/*'
-    base-directory: 'coverage'
+    base-directory: 'coverage/lcov-report'
 
 cache:
   paths:

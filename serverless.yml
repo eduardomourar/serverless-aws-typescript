@@ -97,7 +97,7 @@ functions:
       TOKEN_ISSUER: ${env:TOKEN_ISSUER}
       JWKS_URI: ${env:JWKS_URI}
       AUDIENCE: ${env:AUDIENCE}
-      API_KEY: ${env:API_KEY}
+      API_KEY: ${env:API_KEY, ''}
 
 custom:
   authorizer:
