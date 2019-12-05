@@ -11,7 +11,8 @@
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
     "start": "npx sls offline start",
     "debug": "export SLS_DEBUG=* && export NODE_ENV=development && npx --node-arg=--inspect sls offline start",
-    "deploy": "npx sls deploy --verbose"
+    "deploy": "npx sls deploy --verbose",
+    "deploy:production": "npx sls deploy --stage v2 --conceal --verbose"
   },
   "repository": {
     "type": "git",
@@ -35,7 +36,6 @@
     "@types/aws-lambda": "^8.10.34",
     "@types/bunyan": "^1.8.6",
     "@types/jest": "^24.0.22",
-    "@types/lodash": "^4.14.146",
     "@types/node": "^12.12.5",
     "@typescript-eslint/eslint-plugin": "^2.6.1",
     "@typescript-eslint/parser": "^2.6.1",

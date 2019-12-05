@@ -75,11 +75,11 @@ export class Authorizer {
     const stage = stageAndApiArn[1];
     let apiArn = `arn:aws:execute-api:${awsRegion}:${awsAccountId}:${restApiId}/${stage}`;
     let effect = 'Deny';
-    if (scope === 'message.view') {
+    if (scope === 'message.read') {
         effect = 'Allow';
         apiArn += '/GET/*';
     } else {
-        if (scope === 'message.edit') {
+        if (scope === 'message.write') {
             effect = 'Allow';
         }
         apiArn += '/*/*';
@@ -96,23 +96,12 @@ export class Authorizer {
   }
 
   private extractToken(event: CustomAuthorizerEvent): Token {
-    let tokenString = this.getHeader(event, 'x-api-key');
-
-    if (tokenString) {
-      if (tokenString.length < 8) {
-        throw new Error(`Invalid API Key: ${tokenString}`);
-      }
-      return <Token>{
-        value: tokenString,
-        kind: TokenKind.ApiKey,
-      };
-    }
 
     if (event.resource !== '/authorize' && (!event.type || event.type !== 'TOKEN')) {
       throw new Error('Expected "event.type" parameter to have value "TOKEN"');
     }
 
-    tokenString = event.authorizationToken || this.getHeader(event, 'Authorization');
+    const tokenString = event.authorizationToken || this.getHeader(event, 'Authorization');
     if (!tokenString) {
       throw new Error('Expected "event.authorizationToken" parameter or Authorization header to be set');
     }
@@ -174,7 +163,7 @@ export class Authorizer {
         }
         const scopes: Array<string> = payload.scp || payload.scopes || [];
         scopes.sort().some((scope: string) => {
-            if (scope === 'message.edit' || scope === 'message.view') {
+            if (scope === 'message.read' || scope === 'message.write') {
                 found = scope;
                 return true;
             }

@@ -54,7 +54,7 @@ export class Messenger {
     logger.debug('"Messenger.list": sender', sender);
 
     if (!recipient && !sender) {
-      throw new Error(`[400] Invalid recipient or sender.`);
+      throw new Error('[400] Invalid recipient or sender.');
     }
 
     const params: QueryInput = {
@@ -80,11 +80,11 @@ export class Messenger {
 
       params.IndexName = 'sender-index';
       params.KeyConditionExpression = 'sender = :sender';
-      params.ExpressionAttributeValues =  {
+      params.ExpressionAttributeValues = {
         ':sender': {
           S: sender,
         } as AttributeValue,
-      }
+      };
     }
 
     const record = await this.db.query(params).promise();
@@ -287,27 +287,23 @@ export class Messenger {
     if (!Messenger.validatePhone(destinationPhone)) {
       throw new Error(`[400] Phone number does not match E.164 format. ${destinationPhone}`);
     }
-    let sender = 'APP';
+    /* let sender = 'APP';
     if (message.sender && message.sender.length >= 10) {
       sender = message.sender.replace(/\D/g, '');
-      sender = 'n' + sender.substr(0, 10);
+      sender = `n${sender.substr(0, 10)}`;
     }
-    const messageAttributes: SNS.MessageAttributeMap = {
-      DefaultSMSType: {
-        DataType: 'String',
-        Value: 'Promotional',
-      } as SNS.MessageAttributeValue,
-      DefaultSenderID: {
-        DataType: 'String',
-        Value: sender,
-      } as SNS.MessageAttributeValue,
-    };
-    logger.debug('"Messenger.sendSms": messageAttributes', messageAttributes);
+    const smsAttributes = await this.sns.setSMSAttributes({
+      attributes: {
+        DefaultSMSType: 'Transactional',
+        DefaultSenderID: sender,
+        MonthlySpendLimit: '1',
+      },
+    }).promise();
+    logger.debug('"Messenger.sendSms": smsAttributes', smsAttributes); */
     const published = await this.sns.publish({
       Message: message.body,
       PhoneNumber: destinationPhone,
       // Subject: message.subject,
-      MessageAttributes: messageAttributes,
     }).promise();
     logger.debug('"Messenger.sendSms": published', published);
     return published;
