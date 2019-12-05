@@ -16,10 +16,10 @@ phases:
       - npm run lint
       - npm run test:coverage
 
-artifacts:
-  base-directory: 'coverage'
-  files:
-    - '**/*'
+# artifacts:
+#   base-directory: 'coverage'
+#   files:
+#     - '**/*'
 
 reports:
   coverage:
