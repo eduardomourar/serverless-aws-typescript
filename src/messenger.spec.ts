@@ -16,7 +16,7 @@ describe('Messenger', () => {
   it('Should be an invalid email', async () => {
     expect(instance).toBeInstanceOf(Messenger);
     const validateEmail = await Messenger.validateEmail('sample');
-    expect(validateEmail).toBeTruthy();
+    expect(validateEmail).toBeFalsy();
   });
 
   it('Should be a valid phone', async () => {

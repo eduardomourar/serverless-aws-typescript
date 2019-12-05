@@ -31,7 +31,7 @@
     "outputDirectory": "coverage",
     "outputName": "junit.xml",
     "classNameTemplate": "{classname}",
-    "titleTemplate": "{classname} - {title}",
+    "titleTemplate": "{title}",
     "ancestorSeparator": " › ",
     "suiteNameTemplate": "{filename|filepath|ancestorTitles}",
     "includeShortConsoleOutput": true,

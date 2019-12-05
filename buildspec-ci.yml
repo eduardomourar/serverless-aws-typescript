@@ -24,7 +24,7 @@ artifacts:
 reports:
   coverage:
     files:
-      - 'junit.xml'
+      - '**/*'
     base-directory: 'coverage'
 
 cache:
