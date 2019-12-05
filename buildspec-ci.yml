@@ -13,8 +13,8 @@ phases:
   build:
     commands:
       - mkdir coverage
-      - npm run lint | tee coverage/lint.txt
-      - npm run test:coverage | tee coverage/test.txt
+      - npm run lint
+      - npm run test:coverage
 
 artifacts:
   base-directory: 'coverage'
