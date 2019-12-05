@@ -13,8 +13,8 @@ phases:
   build:
     commands:
       - mkdir coverage
-      - npm run lint | tee coverage/lint.txt 
-      - npx jest --colors --ci --coverage --coverageReporters=lcov | tee coverage/test.txt
+      - npm run lint | tee coverage/lint.txt
+      - npm run test:coverage | tee coverage/test.txt
 
 artifacts:
   base-directory: 'coverage'
@@ -24,8 +24,8 @@ artifacts:
 reports:
   coverage:
     files:
-      - '**/*'
-    base-directory: 'coverage/lcov-report'
+      - 'junit.xml'
+    base-directory: 'coverage'
 
 cache:
   paths:

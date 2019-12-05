@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx jest",
-    "test:coverage": "npx jest --colors --coverage",
+    "test:coverage": "npx jest --ci --coverage",
     "lint": "npx eslint --config .eslintrc.js **/*.ts",
     "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
@@ -24,6 +24,18 @@
   },
   "author": "Eduardo Rodrigues",
   "license": "MIT",
+  "jest-junit": {
+    "reporters": [
+      "jest-junit"
+    ],
+    "outputDirectory": "coverage",
+    "outputName": "junit.xml",
+    "classNameTemplate": "{classname}-{title}",
+    "titleTemplate": "{classname}-{title}",
+    "ancestorSeparator": " › ",
+    "suiteNameTemplate": "{filename|filepath|ancestorTitles}",
+    "usePathForSuiteName": "true"
+  },
   "dependencies": {
     "aws-sdk": "^2.575.0",
     "bunyan": "^1.8.12",
@@ -45,6 +57,7 @@
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-jest": "^23.0.3",
     "jest": "^24.9.0",
+    "jest-junit": "^10.0.0",
     "serverless": "^1.56.1",
     "serverless-dotenv-plugin": "^2.1.1",
     "serverless-dynamodb-local": "^0.2.38",
