@@ -20,7 +20,6 @@ phases:
 #   base-directory: 'coverage'
 #   files:
 #     - '**/*'
-
 reports:
   coverage:
     files:
