@@ -115,7 +115,7 @@ custom:
     accountId: ${env:AWS_ACCOUNT, '123456789012'}
 
 resources:
-  Description: AWS Serverless Messaging Delivery App v${file(package.json):version}
+  Description: AWS Serverless Message Delivery App v${file(package.json):version}
   Resources:
     # This response is needed for custom authorizer failures cors support
     GatewayResponse:
@@ -151,9 +151,13 @@ resources:
             AttributeType: "S"
           - AttributeName: sender
             AttributeType: "S"
+          - AttributeName: kind
+            AttributeType: "S"
         KeySchema:
           - AttributeName: messageId
             KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
         GlobalSecondaryIndexes:
           - IndexName: recipient-index
             KeySchema:

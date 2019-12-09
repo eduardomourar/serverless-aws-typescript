@@ -9,7 +9,9 @@ npm install
 
 Create a .env file with:
 ```
-API_KEY=random-uuidv4
+TOKEN_ISSUER=https://issuer.com/oauth2/default	
+JWKS_URI=https://issuer.com/oauth2/default/v1/keys	
+AUDIENCE=audience-identifier
 ```
 
 ## Local testing

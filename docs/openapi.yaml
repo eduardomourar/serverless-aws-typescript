@@ -1,6 +1,6 @@
 openapi: "3.0.1"
 info:
-  title: "AWS Serverless Messaging Delivery API"
+  title: "AWS Serverless Message Delivery API"
   version: "0.2.0"
 servers:
 - url: "https://zzvegqkpmg.execute-api.eu-west-1.amazonaws.com/{basePath}"

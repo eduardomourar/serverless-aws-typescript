@@ -17,7 +17,7 @@ import { IMessage, IMessageWithId, MessageKind } from './models/message';
 const isLocal = process.env.OFFLINE || !process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 /**
- * Class used by the messaging delivery engine to send updates to users and
+ * Class used by the message delivery engine to send updates to users and
  * also keep track of the updates sent for later processing.
  */
 export class Messenger {
