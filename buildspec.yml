@@ -1,0 +1,20 @@
+version: 0.2
+
+env:
+  variables:
+    TOKEN_ISSUER: https://dev-315115.okta.com/oauth2/default
+    JWKS_URI: https://dev-315115.okta.com/oauth2/default/v1/keys
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - npm ci --no-optional
+  build:
+    commands:
+      - npm run deploy:production
+
+cache:
+  paths:
+    - 'node_modules/**/*'

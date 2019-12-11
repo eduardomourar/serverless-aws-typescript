@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "npx jest",
-    "test:coverage": "npx jest --coverage",
+    "test:coverage": "npx jest --ci --coverage",
     "lint": "npx eslint --config .eslintrc.js **/*.ts",
     "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
+    "setup:db": "docker run -d -p 8000:8000 amazon/dynamodb-local",
     "start": "npx sls offline start",
     "debug": "export SLS_DEBUG=* && export NODE_ENV=development && npx --node-arg=--inspect sls offline start",
-    "deploy": "npx sls deploy --verbose"
+    "deploy": "npx sls deploy --verbose",
+    "deploy:production": "npx sls deploy --stage v2 --conceal --verbose"
   },
   "repository": {
     "type": "git",
@@ -23,18 +25,31 @@
   },
   "author": "Eduardo Rodrigues",
   "license": "MIT",
+  "jest-junit": {
+    "reporters": [
+      "jest-junit"
+    ],
+    "outputDirectory": "coverage",
+    "outputName": "junit.xml",
+    "classNameTemplate": "{classname}",
+    "titleTemplate": "{title}",
+    "ancestorSeparator": " › ",
+    "suiteNameTemplate": "{filename|filepath|ancestorTitles}",
+    "includeShortConsoleOutput": true,
+    "usePathForSuiteName": "true"
+  },
   "dependencies": {
     "aws-sdk": "^2.575.0",
     "bunyan": "^1.8.12",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.6.0",
+    "middy": "^0.30.5",
     "source-map-support": "^0.5.16"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.34",
     "@types/bunyan": "^1.8.6",
     "@types/jest": "^24.0.22",
-    "@types/lodash": "^4.14.146",
     "@types/node": "^12.12.5",
     "@typescript-eslint/eslint-plugin": "^2.6.1",
     "@typescript-eslint/parser": "^2.6.1",
@@ -44,11 +59,13 @@
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-jest": "^23.0.3",
     "jest": "^24.9.0",
+    "jest-junit": "^10.0.0",
     "serverless": "^1.56.1",
     "serverless-dotenv-plugin": "^2.1.1",
     "serverless-dynamodb-local": "^0.2.38",
     "serverless-offline": "^5.12.0",
-    "serverless-offline-sns": "^0.65.0",
+    "serverless-offline-sns": "^0.68.0",
+    "serverless-plugin-aws-alerts": "^1.4.0",
     "serverless-plugin-typescript": "^1.1.9",
     "ts-jest": "^24.1.0",
     "typescript": "^3.7.2"

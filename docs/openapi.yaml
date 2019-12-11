@@ -1,26 +1,44 @@
 openapi: "3.0.1"
 info:
-  title: "AWS Serverless Messaging Delivery API"
-  version: "0.1.0"
+  title: "AWS Serverless Message Delivery API"
+  version: "0.2.0"
 servers:
-- url: "https://2jgsc4cuaa.execute-api.eu-west-1.amazonaws.com/{basePath}"
+- url: "https://zzvegqkpmg.execute-api.eu-west-1.amazonaws.com/{basePath}"
   variables:
     basePath:
-      default: "v1"
+      default: "v2"
 paths:
   /message:
     get:
-      summary: Lists all messages stored
+      summary: List all messages stored in the system
       security:
-      - authorize: []
+        - authorize:
+          - message.read
       parameters:
         - name: recipient
           in: query
-          required: true
+          required: false
           description: The recipient (either Email or phone number) of the
+            message to query
+          schema:
+            type: string
+        - name: sender
+          in: query
+          required: false
+          description: The sender (either Email or phone number) of the
+            message to query
+          schema:
+            type: string
+        - name: kind
+          in: query
+          required: false
+          description: The message type (Email or SMS) of the
             message to filter
           schema:
             type: string
+            enum:
+              - email
+              - sms
       responses:
         '200':
           description: "200 response"
@@ -33,7 +51,8 @@ paths:
     post:
       summary: Publish message to be processed
       security:
-      - authorize: []
+        - authorize:
+          - message.write
       requestBody:
         description: Message details to be published
         required: true
@@ -54,12 +73,13 @@ paths:
     get:
       summary: Retrieve specific message by identifier
       security:
-      - authorize: []
+        - authorize:
+          - message.read
       parameters:
         - name: messageId
           in: path
           required: true
-          description: The identifier of the message to retrieve
+          description: The unique identifier of the message to retrieve
           schema:
             type: string
       responses:
@@ -69,6 +89,35 @@ paths:
             application/json:    
               schema:
                 $ref: "#/components/schemas/Message"
+        '401':
+             $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      summary: Delete specific message by identifier
+      security:
+        - authorize:
+          - message.write
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          description: The unique identifier of the message to delete
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "200 response"
+          content:
+            application/json:    
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      messageId:
+                        type: string
         '401':
              $ref: '#/components/responses/UnauthorizedError'
 components:
@@ -113,7 +162,7 @@ components:
           type: string
           enum:
             - email
-            - sms            
+            - sms
         sender:
           type: string
         subject:
@@ -158,5 +207,17 @@ components:
             type: string
   securitySchemes:
     authorize:
-      type: http
-      scheme: basic
+      # type: openIdConnect
+      # openIdConnectUrl: https://dev-315115.okta.com/oauth2/default/.well-known/openid-configuration
+      type: oauth2
+      description: This API uses OAuth 2 with the implicit grant flow.
+      flows:
+        implicit:
+          authorizationUrl: https://dev-315115.okta.com/oauth2/default/v1/authorize?nonce=12345
+          scopes:
+            openid: Signals that a request is an OpenID request
+            profile: Allows this application to access your profile information
+            email: Allows this application to access your email address
+            phone: Allows this application to access your phone number
+            message.read: Read messages
+            message.write: Write messages

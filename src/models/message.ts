@@ -3,6 +3,12 @@ export enum MessageKind {
   email = 'email',
 }
 
+export enum StatusKind {
+  success = 'success',
+  failure = 'failure',
+  processing = 'processing',
+}
+
 export interface IMessage {
   body: string,
   recipient: string,
@@ -14,4 +20,5 @@ export interface IMessage {
 export interface IMessageWithId extends IMessage {
   readonly messageId: string,
   readonly timestamp?: number,
+  status?: StatusKind;
 }

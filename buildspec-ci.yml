@@ -1,0 +1,31 @@
+version: 0.2
+
+env:
+  variables:
+    NODE_ENV: development
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - npm ci --no-optional
+  build:
+    commands:
+      - mkdir coverage
+      - npm run lint
+      - npm run test:coverage
+
+# artifacts:
+#   base-directory: 'coverage'
+#   files:
+#     - '**/*'
+reports:
+  coverage:
+    files:
+      - '**/*'
+    base-directory: 'coverage'
+
+cache:
+  paths:
+    - 'node_modules/**/*'

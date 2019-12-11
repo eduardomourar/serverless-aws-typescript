@@ -3,6 +3,8 @@ import {
 } from 'aws-sdk';
 import {
   AttributeValue,
+  ExpressionAttributeValueMap,
+  DeleteItemInput,
   GetItemInput,
   PutItemInput,
   PutItemOutput,
@@ -17,7 +19,7 @@ import { IMessage, IMessageWithId, MessageKind } from './models/message';
 const isLocal = process.env.OFFLINE || !process.env.AWS_LAMBDA_FUNCTION_NAME;
 
 /**
- * Class used by the messaging delivery engine to send updates to users and
+ * Class used by the message delivery engine to send updates to users and
  * also keep track of the updates sent for later processing.
  */
 export class Messenger {
@@ -44,28 +46,67 @@ export class Messenger {
   }
 
   /**
-   * Lists every message destined to a particular recipient
+   * Lists every message destined to a particular recipient or sender
    *
    * @param recipient - The recipient that can be either an email or phone number
-   * @returns All messages found addressed to recipient
+   * @param sender - The sender that can be either an email or phone number
+   * @param kind - The message type that can be email or SMS
+   * @returns All messages found addressed to recipient/sender
    */
-  public async list(recipient: string): Promise<Array<IMessageWithId>> {
+  public async list(recipient: string, sender: string, kind: MessageKind): Promise<Array<IMessageWithId>> {
     logger.debug('"Messenger.list": recipient', recipient);
+    logger.debug('"Messenger.list": sender', sender);
+    logger.debug('"Messenger.list": kind', kind);
 
-    if (!Messenger.validateEmail(recipient) && !Messenger.validatePhone(recipient)) {
-      throw new Error(`[400] Invalid phone number or email address. ${recipient}`);
+    if (!recipient && !sender) {
+      throw new Error('[400] Invalid recipient or sender.');
     }
 
     const params: QueryInput = {
       TableName: this.dbTable,
-      IndexName: 'recipient-index',
-      KeyConditionExpression: 'recipient = :recipient',
-      ExpressionAttributeValues: {
+      ScanIndexForward: false,
+    };
+    let expressionAttributes: ExpressionAttributeValueMap = {};
+
+    if (recipient) {
+      if (!Messenger.validateEmail(recipient) && !Messenger.validatePhone(recipient)) {
+        throw new Error(`[400] Invalid phone number or email address. ${recipient}`);
+      }
+
+      params.IndexName = 'recipient-index';
+      params.KeyConditionExpression = 'recipient = :recipient';
+      expressionAttributes = {
         ':recipient': {
           S: recipient,
         } as AttributeValue,
-      },
-    };
+      };
+    }
+
+    if (sender) {
+      if (!Messenger.validateEmail(sender) && !Messenger.validatePhone(sender)) {
+        throw new Error(`[400] Invalid phone number or email address. ${sender}`);
+      }
+
+      params.IndexName = 'sender-index';
+      params.KeyConditionExpression = 'sender = :sender';
+      expressionAttributes = {
+        ':sender': {
+          S: sender,
+        } as AttributeValue,
+      };
+    }
+
+    if (kind) {
+      params.FilterExpression = 'kind = :kind';
+      expressionAttributes = {
+        ...expressionAttributes,
+        ':kind': {
+          S: kind.toString(),
+        } as AttributeValue,
+      };
+    }
+    params.ExpressionAttributeValues = expressionAttributes;
+
     const record = await this.db.query(params).promise();
     const convertedDataArray: Array<IMessageWithId> = (record.Items || []).map((item: any) => {
       const unmappedItem = DynamoDB.Converter.unmarshall(item) as IMessageWithId;
@@ -158,7 +199,7 @@ export class Messenger {
    * Retrieves message based on specified identifier
    *
    * @param messageId - Message unique identifier
-   * @returns Single message record from database
+   * @returns Single message retrieved record from database
    */
   public async get(messageId: string): Promise<IMessageWithId> {
     logger.debug('"Messenger.get": messageId', messageId);
@@ -179,6 +220,39 @@ export class Messenger {
     }
     const convertedData = DynamoDB.Converter.unmarshall(record.Item) as IMessageWithId;
     return Promise.resolve(convertedData);
+  }
+
+  /**
+   * Deletes message based on specified identifier
+   *
+   * @param messageId - Message unique identifier
+   * @returns Message identifier of deleted record from database
+   */
+  public async remove(messageId: string): Promise<Record<string, any>> {
+    logger.debug('"Messenger.remove": messageId', messageId);
+
+    const params: DeleteItemInput = {
+      TableName: this.dbTable,
+      Key: {
+        messageId: {
+          S: messageId,
+        } as AttributeValue,
+      },
+    };
+
+    const record = await this.db.deleteItem(params).promise();
+    logger.debug('"Messenger.get": record', record);
+    return Promise.resolve({
+      messageId,
+    });
+  }
+
+  public static validateEmail(email: string): boolean {
+    return !!email && !!email.match(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  }
+
+  public static validatePhone(phone: string): boolean {
+    return !!phone && !!phone.match(/^\+?[1-9]\d{8,14}$/);
   }
 
   /**
@@ -266,27 +340,40 @@ export class Messenger {
     if (!Messenger.validatePhone(destinationPhone)) {
       throw new Error(`[400] Phone number does not match E.164 format. ${destinationPhone}`);
     }
-    const responseSmsAttribute = await this.sns.setSMSAttributes({
+    let sender = 'MSGAPPNL';
+    if (message.sender && message.sender.length >= 10) {
+      sender = message.sender.replace(/\D/g, '');
+      sender = `n${sender.substr(0, 10)}`;
+    }
+    /* const smsAttributes = await this.sns.setSMSAttributes({
       attributes: {
         DefaultSMSType: 'Promotional',
-        // DefaultSenderID: message.sender || 'APP',
+        DefaultSenderID: sender,
+        MonthlySpendLimit: '2',
       },
     }).promise();
-    logger.debug('"Messenger.sendSms": responseSmsAttribute', responseSmsAttribute);
+    logger.debug('"Messenger.sendSms": smsAttributes', smsAttributes); */
+    const messageAttributes: SNS.MessageAttributeMap = {
+      'AWS.SNS.SMS.SMSType': {
+        DataType: 'String',
+        StringValue: 'Transactional',
+      } as SNS.MessageAttributeValue,
+      'AWS.SNS.SMS.SenderID': {
+        DataType: 'String',
+        StringValue: sender,
+      } as SNS.MessageAttributeValue,
+      'AWS.SNS.SMS.MaxPrice': {
+        DataType: 'Number',
+        StringValue: '0.15',
+      } as SNS.MessageAttributeValue,
+    };
     const published = await this.sns.publish({
       Message: message.body,
       PhoneNumber: destinationPhone,
-      // Subject: message.subject,
+      Subject: message.subject,
+      MessageAttributes: messageAttributes,
     }).promise();
     logger.debug('"Messenger.sendSms": published', published);
     return published;
-  }
-
-  private static validateEmail(email: string): boolean {
-    return !!email && !!email.match(/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  }
-
-  private static validatePhone(phone: string): boolean {
-    return !!phone && !!phone.match(/^\+?[1-9]\d{1,14}$/);
   }
 }

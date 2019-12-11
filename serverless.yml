@@ -4,7 +4,8 @@ service:
 plugins:
   - serverless-plugin-typescript
   - serverless-dotenv-plugin
-  - serverless-offline-sns
+  - serverless-plugin-aws-alerts
+  # - serverless-offline-sns
   # - serverless-dynamodb-local
   - serverless-offline
 
@@ -38,6 +39,7 @@ provider:
         - "dynamodb:PutItem"
         - "dynamodb:Query"
         - "dynamodb:GetItem"
+        - "dynamodb:DeleteItem"
       Resource:
         - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}"]]
         - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}/*"]]
@@ -58,7 +60,7 @@ provider:
         - "Fn::Join": ["", ["arn:aws:sns:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]
 
 event: &defaultEvent
-  authorizer: authorize
+  authorizer: ${self:custom.authorizer}
   cors: true
 
 functions:
@@ -91,15 +93,28 @@ functions:
           method: get
           path: message/{messageId}
           <<: *defaultEvent
+  remove-message:
+    handler: src/handler.removeMessage
+    events:
+      - http:
+          method: delete
+          path: message/{messageId}
+          <<: *defaultEvent
   authorize: # https://serverless.com/framework/docs/providers/aws/events/apigateway/#http-endpoints-with-custom-authorizers
     handler: src/handler.authorize
     environment:
       TOKEN_ISSUER: ${env:TOKEN_ISSUER}
       JWKS_URI: ${env:JWKS_URI}
       AUDIENCE: ${env:AUDIENCE}
-      API_KEY: ${env:API_KEY}
+      API_KEY: ${env:API_KEY, ''}
 
 custom:
+  authorizer:
+    name: authorize
+    identitySource: method.request.header.Authorization
+    identityValidationExpression: Bearer (.*)
+    resultTtlInSeconds: 0
+    type: token
   serverless-offline:
     port: 3000
     noTimeout: true
@@ -107,10 +122,60 @@ custom:
     port: 4002
     debug: true
     accountId: ${env:AWS_ACCOUNT, '123456789012'}
+  # dynamodb:
+  #   stages:
+  #     - dev
+  #   start:
+  #     host: localhost
+  #     port: "8000"
+  #     noStart: true
+  #     migrate: true
+  notifications:
+    - protocol: email
+      endpoint: ${env:NOTIFICATION_EMAIL}
+  alerts:
+    dashboards: true
+    topics:
+      alarm:
+        topic: ${self:service}-${self:provider.stage}-alerts-alarm
+        notifications: ${self:custom.notifications}
+    definitions:
+      functionErrors:
+        period: 60
+      functionInvocations:
+        threshold: 10
+        period: 600
+    global:
+      - functionThrottles
+      - functionErrors
+    function:
+      - functionInvocations
+      - functionDuration
 
 resources:
-  Description: AWS Serverless Messaging Delivery App v${file(package.json):version}
+  Description: AWS Serverless Message Delivery App v${file(package.json):version}
   Resources:
+    # This response is needed for custom authorizer failures cors support
+    GatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: EXPIRED_TOKEN
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'
+    AuthFailureGatewayResponse:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: UNAUTHORIZED
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        StatusCode: '401'
     MessagingData:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -122,6 +187,8 @@ resources:
             AttributeType: "N"
           - AttributeName: recipient
             AttributeType: "S"
+          - AttributeName: sender
+            AttributeType: "S"
         KeySchema:
           - AttributeName: messageId
             KeyType: HASH
@@ -129,6 +196,17 @@ resources:
           - IndexName: recipient-index
             KeySchema:
               - AttributeName: recipient
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: sender-index
+            KeySchema:
+              - AttributeName: sender
                 KeyType: HASH
               - AttributeName: timestamp
                 KeyType: RANGE

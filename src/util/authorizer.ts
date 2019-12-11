@@ -50,27 +50,41 @@ export class Authorizer {
     const authContext = <AuthResponseContext>{
       'user': 'token',
     };
-    if (token.kind === TokenKind.ApiKey) {
-      await this.verifyApiKey(token.value);
-    } else if (token.kind === TokenKind.Basic) {
-      const basic = await this.verifyBasicAuth(token.value);
-      authContext.user = basic.username;
-    } else {
-      const decoded: any = jwt.decode(token.value, { complete: true });
-      logger.debug('"Authorizer.checkAuthorization": Decoded token', JSON.stringify(decoded));
-      if (!decoded || !decoded.header || !decoded.header.kid || !decoded.payload) {
-        return Promise.reject(new Error('JWT token missing either header or payload information.'))
-      }
-      const signingKey = await this.getKey(decoded.header.kid);
-      logger.debug('"Authorizer.checkAuthorization": Signing key from servers', signingKey);
-      const payload = await this.verifyJwtToken(token.value, signingKey);
-      logger.debug('"Authorizer.checkAuthorization": Payload returned', payload);
-      await this.verifyScopes(payload);
 
-      authContext.user = payload.sub;
-      authContext.issuer = this.oauthOptions.issuer;
+    const decoded: any = jwt.decode(token.value, { complete: true });
+    logger.debug('"Authorizer.checkAuthorization": Decoded token', JSON.stringify(decoded));
+    if (!decoded || !decoded.header || !decoded.header.kid || !decoded.payload) {
+      return Promise.reject(new Error('JWT token missing either header or payload information.'))
     }
-    return generatePolicy(authContext.user, 'Allow', event.methodArn, authContext);
+    const signingKey = await this.getKey(decoded.header.kid);
+    logger.debug('"Authorizer.checkAuthorization": Signing key from servers', signingKey);
+    const payload = await this.verifyJwtToken(token.value, signingKey);
+    logger.debug('"Authorizer.checkAuthorization": Payload returned', payload);
+    const scope = await this.verifyScopes(payload);
+    logger.debug('"Authorizer.checkAuthorization": Verified scope', scope);
+
+    authContext.user = payload.sub;
+    authContext.issuer = this.oauthOptions.issuer;
+    authContext.scope = scope;
+
+    const methodArnSections = event.methodArn.split(':');
+    const stageAndApiArn = methodArnSections[5].split('/');
+    const awsRegion = methodArnSections[3];
+    const awsAccountId = methodArnSections[4];
+    const restApiId = stageAndApiArn[0];
+    const stage = stageAndApiArn[1];
+    let apiArn = `arn:aws:execute-api:${awsRegion}:${awsAccountId}:${restApiId}/${stage}`;
+    let effect = 'Deny';
+    if (scope === 'message.read') {
+        effect = 'Allow';
+        apiArn += '/GET/*';
+    } else {
+        if (scope === 'message.write') {
+            effect = 'Allow';
+        }
+        apiArn += '/*/*';
+    }
+    return generatePolicy(authContext.user, effect, apiArn, authContext);
   }
 
   private getHeader(event: CustomAuthorizerEvent, name: string): string {
@@ -82,23 +96,12 @@ export class Authorizer {
   }
 
   private extractToken(event: CustomAuthorizerEvent): Token {
-    let tokenString = this.getHeader(event, 'x-api-key');
-
-    if (tokenString) {
-      if (tokenString.length < 8) {
-        throw new Error(`Invalid API Key: ${tokenString}`);
-      }
-      return <Token>{
-        value: tokenString,
-        kind: TokenKind.ApiKey,
-      };
-    }
 
     if (event.resource !== '/authorize' && (!event.type || event.type !== 'TOKEN')) {
       throw new Error('Expected "event.type" parameter to have value "TOKEN"');
     }
 
-    tokenString = event.authorizationToken || this.getHeader(event, 'Authorization');
+    const tokenString = event.authorizationToken || this.getHeader(event, 'Authorization');
     if (!tokenString) {
       throw new Error('Expected "event.authorizationToken" parameter or Authorization header to be set');
     }
@@ -151,22 +154,26 @@ export class Authorizer {
     });
   }
 
-  private verifyScopes(payload: any): Promise<any> {
-    let found: boolean = false;
+  private verifyScopes(payload: any): Promise<string> {
+    let found: string = '';
 
     return new Promise((resolve, reject) => {
-      if (!payload.scp && !payload.scopes) {
-        return reject(new Error('JWT token missing scopes information within payload.'))
-      }
-      const scopes: Array<string> = payload.scp || payload.scopes || [];
-      found = scopes.some((scope: string) => {
-        return scope === 'message.edit' || scope === 'message.view';
-      });
-      if (found) {
-        return resolve(payload);
-      } else {
-        return reject(new Error('Based on OAuth scopes, user does not have permission to access this endpoint.'))
-      }
+        if (!payload.scp && !payload.scopes) {
+            return reject(new Error('JWT token missing scopes information within payload.'))
+        }
+        const scopes: Array<string> = payload.scp || payload.scopes || [];
+        scopes.sort().some((scope: string) => {
+            if (scope === 'message.read' || scope === 'message.write') {
+                found = scope;
+                return true;
+            }
+            return false;
+        });
+        if (found) {
+            return resolve(found);
+        } else {
+            return reject(new Error('Based on OAuth scopes, user does not have permission to access this endpoint.'))
+        }
     });
   }
 
