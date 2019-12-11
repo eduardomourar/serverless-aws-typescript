@@ -9,6 +9,7 @@
     "lint": "npx eslint --config .eslintrc.js **/*.ts",
     "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
+    "setup:db": "docker run -d -p 8000:8000 amazon/dynamodb-local",
     "start": "npx sls offline start",
     "debug": "export SLS_DEBUG=* && export NODE_ENV=development && npx --node-arg=--inspect sls offline start",
     "deploy": "npx sls deploy --verbose",
@@ -63,7 +64,8 @@
     "serverless-dotenv-plugin": "^2.1.1",
     "serverless-dynamodb-local": "^0.2.38",
     "serverless-offline": "^5.12.0",
-    "serverless-offline-sns": "^0.65.0",
+    "serverless-offline-sns": "^0.68.0",
+    "serverless-plugin-aws-alerts": "^1.4.0",
     "serverless-plugin-typescript": "^1.1.9",
     "ts-jest": "^24.1.0",
     "typescript": "^3.7.2"

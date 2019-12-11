@@ -4,6 +4,7 @@ service:
 plugins:
   - serverless-plugin-typescript
   - serverless-dotenv-plugin
+  - serverless-plugin-aws-alerts
   # - serverless-offline-sns
   # - serverless-dynamodb-local
   - serverless-offline
@@ -38,6 +39,7 @@ provider:
         - "dynamodb:PutItem"
         - "dynamodb:Query"
         - "dynamodb:GetItem"
+        - "dynamodb:DeleteItem"
       Resource:
         - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}"]]
         - "Fn::Join": ["", ["arn:aws:dynamodb:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":table/${self:provider.environment.DB_TABLE}/*"]]
@@ -91,6 +93,13 @@ functions:
           method: get
           path: message/{messageId}
           <<: *defaultEvent
+  remove-message:
+    handler: src/handler.removeMessage
+    events:
+      - http:
+          method: delete
+          path: message/{messageId}
+          <<: *defaultEvent
   authorize: # https://serverless.com/framework/docs/providers/aws/events/apigateway/#http-endpoints-with-custom-authorizers
     handler: src/handler.authorize
     environment:
@@ -113,6 +122,35 @@ custom:
     port: 4002
     debug: true
     accountId: ${env:AWS_ACCOUNT, '123456789012'}
+  # dynamodb:
+  #   stages:
+  #     - dev
+  #   start:
+  #     host: localhost
+  #     port: "8000"
+  #     noStart: true
+  #     migrate: true
+  notifications:
+    - protocol: email
+      endpoint: ${env:NOTIFICATION_EMAIL}
+  alerts:
+    dashboards: true
+    topics:
+      alarm:
+        topic: ${self:service}-${self:provider.stage}-alerts-alarm
+        notifications: ${self:custom.notifications}
+    definitions:
+      functionErrors:
+        period: 60
+      functionInvocations:
+        threshold: 10
+        period: 600
+    global:
+      - functionThrottles
+      - functionErrors
+    function:
+      - functionInvocations
+      - functionDuration
 
 resources:
   Description: AWS Serverless Message Delivery App v${file(package.json):version}
@@ -151,13 +189,9 @@ resources:
             AttributeType: "S"
           - AttributeName: sender
             AttributeType: "S"
-          - AttributeName: kind
-            AttributeType: "S"
         KeySchema:
           - AttributeName: messageId
             KeyType: HASH
-          - AttributeName: timestamp
-            KeyType: RANGE
         GlobalSecondaryIndexes:
           - IndexName: recipient-index
             KeySchema:

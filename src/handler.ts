@@ -14,6 +14,7 @@ import { logger } from './util/logger';
 import { Authorizer } from './util/authorizer';
 import { enableCors } from './util/cors';
 import { Messenger } from './messenger';
+import { MessageKind } from './models/message';
 import 'source-map-support/register';
 
 export const listMessage: APIGatewayProxyHandler = enableCors(async (
@@ -24,8 +25,8 @@ export const listMessage: APIGatewayProxyHandler = enableCors(async (
   logger.debug({ context }, 'handler.listMessages.context');
 
   const client = new Messenger(process.env.DB_TABLE);
-  const { recipient, sender } = event.queryStringParameters || {};
-  const messages = await client.list(recipient, sender);
+  const { recipient, sender, kind } = event.queryStringParameters || {};
+  const messages = await client.list(recipient, sender, kind as MessageKind);
   return {
     statusCode: 200,
     body: JSON.stringify({
@@ -99,6 +100,25 @@ export const getMessage: APIGatewayProxyHandler = enableCors(async (
 
   const client = new Messenger(process.env.DB_TABLE);
   const message = await client.get(messageId);
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      data: message,
+    }, null, 2),
+  };
+});
+
+export const removeMessage: APIGatewayProxyHandler = enableCors(async (
+  event: APIGatewayProxyEvent,
+  context: Context,
+): Promise<APIGatewayProxyResult> => {
+  logger.debug({ event }, 'handler.removeMessage.event');
+  logger.debug({ context }, 'handler.removeMessage.context');
+
+  const { messageId } = event.pathParameters || {};
+
+  const client = new Messenger(process.env.DB_TABLE);
+  const message = await client.remove(messageId);
   return {
     statusCode: 200,
     body: JSON.stringify({

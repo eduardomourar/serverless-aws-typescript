@@ -10,7 +10,7 @@ servers:
 paths:
   /message:
     get:
-      summary: Lists all messages stored
+      summary: List all messages stored in the system
       security:
         - authorize:
           - message.read
@@ -19,16 +19,26 @@ paths:
           in: query
           required: false
           description: The recipient (either Email or phone number) of the
-            message to filter
+            message to query
           schema:
             type: string
         - name: sender
           in: query
           required: false
           description: The sender (either Email or phone number) of the
+            message to query
+          schema:
+            type: string
+        - name: kind
+          in: query
+          required: false
+          description: The message type (Email or SMS) of the
             message to filter
           schema:
             type: string
+            enum:
+              - email
+              - sms
       responses:
         '200':
           description: "200 response"
@@ -69,7 +79,7 @@ paths:
         - name: messageId
           in: path
           required: true
-          description: The identifier of the message to retrieve
+          description: The unique identifier of the message to retrieve
           schema:
             type: string
       responses:
@@ -79,6 +89,35 @@ paths:
             application/json:    
               schema:
                 $ref: "#/components/schemas/Message"
+        '401':
+             $ref: '#/components/responses/UnauthorizedError'
+    delete:
+      summary: Delete specific message by identifier
+      security:
+        - authorize:
+          - message.write
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          description: The unique identifier of the message to delete
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "200 response"
+          content:
+            application/json:    
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      messageId:
+                        type: string
         '401':
              $ref: '#/components/responses/UnauthorizedError'
 components:
@@ -123,7 +162,7 @@ components:
           type: string
           enum:
             - email
-            - sms            
+            - sms
         sender:
           type: string
         subject:
