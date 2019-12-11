@@ -4,11 +4,6 @@ env:
   variables:
     TOKEN_ISSUER: https://dev-315115.okta.com/oauth2/default
     JWKS_URI: https://dev-315115.okta.com/oauth2/default/v1/keys
-    AUDIENCE: aus34wv4xr9ypJJTg0i7
-    SNS_ARN: arn:aws:sns:eu-west-1:665331858954:messaging-topic-v2
-    SNS_TOPIC: messaging-topic-v2
-    DB_TABLE: messaging-data-v2
-    NODE_ENV: development
 
 phases:
   install:
