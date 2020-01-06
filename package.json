@@ -11,7 +11,7 @@
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
     "setup:db": "docker run -d -p 8000:8000 amazon/dynamodb-local",
     "start": "npx sls offline start",
-    "debug": "export SLS_DEBUG=* && export NODE_ENV=development && npx --node-arg=--inspect sls offline start",
+    "start:debug": "SLS_DEBUG=* NODE_ENV=development npx --node-arg=--inspect sls offline start",
     "deploy": "npx sls deploy --verbose",
     "deploy:production": "npx sls deploy --stage v2 --conceal --verbose"
   },
@@ -49,25 +49,14 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.34",
     "@types/bunyan": "^1.8.6",
-    "@types/jest": "^24.0.22",
-    "@types/node": "^12.12.5",
-    "@typescript-eslint/eslint-plugin": "^2.6.1",
-    "@typescript-eslint/parser": "^2.6.1",
-    "dotenv": "^8.0.0",
-    "eslint": "^6.6.0",
-    "eslint-config-airbnb-base": "^14.0.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-jest": "^23.0.3",
     "jest": "^24.9.0",
     "jest-junit": "^10.0.0",
     "serverless": "^1.56.1",
-    "serverless-dotenv-plugin": "^2.1.1",
     "serverless-dynamodb-local": "^0.2.38",
-    "serverless-offline": "^5.12.0",
     "serverless-offline-sns": "^0.68.0",
     "serverless-plugin-aws-alerts": "^1.4.0",
-    "serverless-plugin-typescript": "^1.1.9",
-    "ts-jest": "^24.1.0",
-    "typescript": "^3.7.2"
-  }
+    "serverless-typescript-api": "github:eduardomourar/serverless-typescript-api#master",
+    "typescript": "^3.7.4"
+  },
+  "localDependencies": {}
 }

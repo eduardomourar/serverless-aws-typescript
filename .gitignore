@@ -4,6 +4,7 @@ node_modules
 # serverless
 .serverless
 .build
+.serverless_plugins
 
 # jest
 coverage

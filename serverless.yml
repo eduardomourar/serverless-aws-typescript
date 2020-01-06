@@ -2,25 +2,21 @@ service:
   name: serverless-aws-typescript
 
 plugins:
-  - serverless-plugin-typescript
-  - serverless-dotenv-plugin
   - serverless-plugin-aws-alerts
   # - serverless-offline-sns
   # - serverless-dynamodb-local
-  - serverless-offline
+  - serverless-typescript-api
 
 provider:
   name: aws
   runtime: nodejs10.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'eu-west-1'}
-  versionFunctions: false
   stackTags:
     "APPLICATION": "messaging-app"
   apiGateway:
     minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
   environment:
-    REGION: ${self:provider.region}
     SNS_TOPIC: ${env:SNS_TOPIC, 'messaging-topic'}
     SNS_ARN: ${env:SNS_ARN, "arn:aws:sns:${self:provider.region}:${env:AWS_ACCOUNT, '123456789012'}:${env:SNS_TOPIC, 'messaging-topic'}"}
     DB_TABLE: ${env:DB_TABLE, 'messaging-data'}
@@ -155,27 +151,6 @@ custom:
 resources:
   Description: AWS Serverless Message Delivery App v${file(package.json):version}
   Resources:
-    # This response is needed for custom authorizer failures cors support
-    GatewayResponse:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: EXPIRED_TOKEN
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
-        StatusCode: '401'
-    AuthFailureGatewayResponse:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseType: UNAUTHORIZED
-        RestApiId:
-          Ref: 'ApiGatewayRestApi'
-        StatusCode: '401'
     MessagingData:
       Type: AWS::DynamoDB::Table
       Properties:
