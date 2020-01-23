@@ -2,7 +2,7 @@ service:
   name: serverless-aws-typescript
 
 plugins:
-  - serverless-plugin-aws-alerts
+  # - serverless-plugin-aws-alerts
   # - serverless-offline-sns
   # - serverless-dynamodb-local
   - serverless-typescript-api
@@ -66,7 +66,7 @@ functions:
       - http:
           method: get
           path: message
-          <<: *defaultEvent
+          # <<: *defaultEvent
   publish-message:
     handler: src/handler.publishMessage
     events:
@@ -126,70 +126,70 @@ custom:
   #     port: "8000"
   #     noStart: true
   #     migrate: true
-  notifications:
-    - protocol: email
-      endpoint: ${env:NOTIFICATION_EMAIL}
-  alerts:
-    dashboards: true
-    topics:
-      alarm:
-        topic: ${self:service}-${self:provider.stage}-alerts-alarm
-        notifications: ${self:custom.notifications}
-    definitions:
-      functionErrors:
-        period: 60
-      functionInvocations:
-        threshold: 10
-        period: 600
-    global:
-      - functionThrottles
-      - functionErrors
-    function:
-      - functionInvocations
-      - functionDuration
+  # notifications:
+  #   - protocol: email
+  #     endpoint: ${env:NOTIFICATION_EMAIL}
+  # alerts:
+  #   dashboards: true
+  #   topics:
+  #     alarm:
+  #       topic: ${self:service}-${self:provider.stage}-alerts-alarm
+  #       notifications: ${self:custom.notifications}
+  #   definitions:
+  #     functionErrors:
+  #       period: 60
+  #     functionInvocations:
+  #       threshold: 10
+  #       period: 600
+  #   global:
+  #     - functionThrottles
+  #     - functionErrors
+  #   function:
+  #     - functionInvocations
+  #     - functionDuration
 
-resources:
-  Description: AWS Serverless Message Delivery App v${file(package.json):version}
-  Resources:
-    MessagingData:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:provider.environment.DB_TABLE}
-        AttributeDefinitions:
-          - AttributeName: messageId
-            AttributeType: "S"
-          - AttributeName: timestamp
-            AttributeType: "N"
-          - AttributeName: recipient
-            AttributeType: "S"
-          - AttributeName: sender
-            AttributeType: "S"
-        KeySchema:
-          - AttributeName: messageId
-            KeyType: HASH
-        GlobalSecondaryIndexes:
-          - IndexName: recipient-index
-            KeySchema:
-              - AttributeName: recipient
-                KeyType: HASH
-              - AttributeName: timestamp
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-            ProvisionedThroughput:
-              ReadCapacityUnits: 5
-              WriteCapacityUnits: 5
-          - IndexName: sender-index
-            KeySchema:
-              - AttributeName: sender
-                KeyType: HASH
-              - AttributeName: timestamp
-                KeyType: RANGE
-            Projection:
-              ProjectionType: ALL
-            ProvisionedThroughput:
-              ReadCapacityUnits: 5
-              WriteCapacityUnits: 5
-        ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
+# resources:
+#   Description: AWS Serverless Message Delivery App v${file(package.json):version}
+#   Resources:
+#     MessagingData:
+#       Type: AWS::DynamoDB::Table
+#       Properties:
+#         TableName: ${self:provider.environment.DB_TABLE}
+#         AttributeDefinitions:
+#           - AttributeName: messageId
+#             AttributeType: "S"
+#           - AttributeName: timestamp
+#             AttributeType: "N"
+#           - AttributeName: recipient
+#             AttributeType: "S"
+#           - AttributeName: sender
+#             AttributeType: "S"
+#         KeySchema:
+#           - AttributeName: messageId
+#             KeyType: HASH
+#         GlobalSecondaryIndexes:
+#           - IndexName: recipient-index
+#             KeySchema:
+#               - AttributeName: recipient
+#                 KeyType: HASH
+#               - AttributeName: timestamp
+#                 KeyType: RANGE
+#             Projection:
+#               ProjectionType: ALL
+#             ProvisionedThroughput:
+#               ReadCapacityUnits: 5
+#               WriteCapacityUnits: 5
+#           - IndexName: sender-index
+#             KeySchema:
+#               - AttributeName: sender
+#                 KeyType: HASH
+#               - AttributeName: timestamp
+#                 KeyType: RANGE
+#             Projection:
+#               ProjectionType: ALL
+#             ProvisionedThroughput:
+#               ReadCapacityUnits: 5
+#               WriteCapacityUnits: 5
+#         ProvisionedThroughput:
+#           ReadCapacityUnits: 5
+#           WriteCapacityUnits: 5

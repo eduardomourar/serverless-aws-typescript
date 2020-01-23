@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx jest",
-    "test:coverage": "npx jest --ci --coverage",
+    "test": "npx jest --config=jest.config.js",
+    "test:coverage": "npx jest --ci --coverage --config=jest.config.js",
     "lint": "npx eslint --config .eslintrc.js **/*.ts",
     "lint:fix": "npx eslint --config .eslintrc.js **/*.ts --fix",
+    "document": "npx tplant --input src/handler.ts --output docs/uml.svg && npx typedoc",
     "setup": "npx sls config credentials --provider aws --key KEY --secret SECRET",
     "setup:db": "docker run -d -p 8000:8000 amazon/dynamodb-local",
     "start": "npx sls offline start",
@@ -49,6 +50,9 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.34",
     "@types/bunyan": "^1.8.6",
+    "@types/jest": "^24.0.22",
+    "@types/jsonwebtoken": "^8.3.7",
+    "@types/node": "^12.12.5",
     "jest": "^24.9.0",
     "jest-junit": "^10.0.0",
     "serverless": "^1.56.1",
@@ -56,7 +60,10 @@
     "serverless-offline-sns": "^0.68.0",
     "serverless-plugin-aws-alerts": "^1.4.0",
     "serverless-typescript-api": "github:eduardomourar/serverless-typescript-api#master",
-    "typescript": "^3.7.4"
+    "tplant": "^2.3.3",
+    "ts-jest": "^24.1.0",
+    "typedoc": "^0.15.6",
+    "typescript": "^3.7.5"
   },
   "localDependencies": {}
 }

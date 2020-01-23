@@ -1,4 +1,4 @@
-import { Messenger } from './messenger';
+import { Messenger } from '../src/messenger';
 
 describe('Messenger', () => {
   let instance: Messenger;
