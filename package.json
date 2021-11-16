@@ -40,7 +40,7 @@
     "usePathForSuiteName": "true"
   },
   "dependencies": {
-    "aws-sdk": "^2.575.0",
+    "aws-sdk": "^2.814.0",
     "bunyan": "^1.8.12",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.6.0",
