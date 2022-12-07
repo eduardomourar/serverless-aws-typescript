@@ -55,7 +55,7 @@
     "@types/node": "^12.12.5",
     "jest": "^24.9.0",
     "jest-junit": "^10.0.0",
-    "serverless": "^1.56.1",
+    "serverless": "^3.25.1",
     "serverless-dynamodb-local": "^0.2.38",
     "serverless-offline-sns": "^0.68.0",
     "serverless-plugin-aws-alerts": "^1.4.0",
